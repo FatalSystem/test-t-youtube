@@ -41,7 +41,7 @@ npm install
 Create a `.env.local` file in the `frontend/` directory:
 
 ```env
-NEXT_PUBLIC_API_BASE_URL=http://localhost:3002
+NEXT_PUBLIC_API_BASE_URL=
 ```
 
 ### 🧪 Run Development Server

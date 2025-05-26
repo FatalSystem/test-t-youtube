@@ -1,8 +1,9 @@
-import { Module } from '@nestjs/common';
-import { ConfigModule } from '@nestjs/config';
-import config from './config/config';
-import { SearchModule } from './api/search/search.module';
-import { VideoModule } from './api/video/video.module';
+import { Module } from "@nestjs/common";
+import { ConfigModule } from "@nestjs/config";
+import config from "./config/config";
+import { SearchModule } from "./api/search/search.module";
+import { VideoModule } from "./api/video/video.module";
+import { HealthModule } from "./health/health.module";
 
 @Module({
   imports: [
@@ -11,6 +12,7 @@ import { VideoModule } from './api/video/video.module';
     }),
     SearchModule,
     VideoModule,
+    HealthModule,
   ],
 })
 export class AppModule {}
