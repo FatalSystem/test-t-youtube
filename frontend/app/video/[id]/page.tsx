@@ -1,15 +1,15 @@
-"use client"
+"use client";
 
-import { useEffect, useState } from "react"
-import { useParams, useRouter } from "next/navigation"
-import dynamic from "next/dynamic"
-import { ArrowLeft, ThumbsUp, MessageCircle, Eye, Calendar, User, Share2, Download } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Separator } from "@/components/ui/separator"
-import { useVideoStore } from "@/lib/stores/video-store"
-import { ApiStatus } from "@/components/api-status"
+import { useEffect, useState } from "react";
+import { useParams, useRouter } from "next/navigation";
+import dynamic from "next/dynamic";
+import { ArrowLeft, ThumbsUp, MessageCircle, Eye, Calendar, User, Share2, Download } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
+import { useVideoStore } from "@/lib/stores/video-store";
+import { ApiStatus } from "@/components/api-status";
 
 // Dynamically import ReactPlayer to avoid SSR issues
 const ReactPlayer = dynamic(() => import("react-player/youtube"), {
@@ -19,72 +19,72 @@ const ReactPlayer = dynamic(() => import("react-player/youtube"), {
       <div className="text-muted-foreground">Loading player...</div>
     </div>
   ),
-})
+});
 
 export default function VideoDetailPage() {
-  const params = useParams()
-  const router = useRouter()
-  const videoId = params.id as string
-  const [showFullDescription, setShowFullDescription] = useState(false)
+  const params = useParams();
+  const router = useRouter();
+  const videoId = params.id as string;
+  const [showFullDescription, setShowFullDescription] = useState(false);
 
-  const { currentVideo: video, isLoading, error, fetchVideo, clearVideo } = useVideoStore()
+  const { currentVideo: video, isLoading, error, fetchVideo, clearVideo } = useVideoStore();
 
   useEffect(() => {
     if (videoId) {
-      fetchVideo(videoId)
+      fetchVideo(videoId);
     }
 
     // Cleanup when component unmounts
     return () => {
-      clearVideo()
-    }
-  }, [videoId, fetchVideo, clearVideo])
+      clearVideo();
+    };
+  }, [videoId, fetchVideo, clearVideo]);
 
   const formatNumber = (num: number) => {
     if (num >= 1000000) {
-      return (num / 1000000).toFixed(1) + "M"
+      return (num / 1000000).toFixed(1) + "M";
     } else if (num >= 1000) {
-      return (num / 1000).toFixed(1) + "K"
+      return (num / 1000).toFixed(1) + "K";
     }
-    return num.toString()
-  }
+    return num.toString();
+  };
 
   const formatDate = (dateString: string) => {
-    const date = new Date(dateString)
+    const date = new Date(dateString);
     return date.toLocaleDateString("en-US", {
       year: "numeric",
       month: "long",
       day: "numeric",
-    })
-  }
+    });
+  };
 
   const formatDescription = (description: string) => {
-    const lines = description.split("\n")
+    const lines = description.split("\n");
     if (!showFullDescription && lines.length > 5) {
-      return lines.slice(0, 5).join("\n") + "..."
+      return lines.slice(0, 5).join("\n") + "...";
     }
-    return description
-  }
+    return description;
+  };
 
   const getRelativeTime = (dateString: string) => {
-    const date = new Date(dateString)
-    const now = new Date()
-    const diffInHours = (now.getTime() - date.getTime()) / (1000 * 60 * 60)
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffInHours = (now.getTime() - date.getTime()) / (1000 * 60 * 60);
 
     if (diffInHours < 24) {
-      const hours = Math.floor(diffInHours)
-      return `${hours} hour${hours !== 1 ? "s" : ""} ago`
+      const hours = Math.floor(diffInHours);
+      return `${hours} hour${hours !== 1 ? "s" : ""} ago`;
     } else if (diffInHours < 168) {
-      const days = Math.floor(diffInHours / 24)
-      return `${days} day${days !== 1 ? "s" : ""} ago`
+      const days = Math.floor(diffInHours / 24);
+      return `${days} day${days !== 1 ? "s" : ""} ago`;
     } else if (diffInHours < 720) {
-      const weeks = Math.floor(diffInHours / 168)
-      return `${weeks} week${weeks !== 1 ? "s" : ""} ago`
+      const weeks = Math.floor(diffInHours / 168);
+      return `${weeks} week${weeks !== 1 ? "s" : ""} ago`;
     } else {
-      const months = Math.floor(diffInHours / 720)
-      return `${months} month${months !== 1 ? "s" : ""} ago`
+      const months = Math.floor(diffInHours / 720);
+      return `${months} month${months !== 1 ? "s" : ""} ago`;
     }
-  }
+  };
 
   if (isLoading) {
     return (
@@ -109,7 +109,7 @@ export default function VideoDetailPage() {
           </div>
         </div>
       </div>
-    )
+    );
   }
 
   if (error || !video) {
@@ -139,7 +139,7 @@ export default function VideoDetailPage() {
           </div>
         </div>
       </div>
-    )
+    );
   }
 
   return (
@@ -211,20 +211,6 @@ export default function VideoDetailPage() {
             </div>
 
             <Separator />
-
-            {/* Channel Info */}
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
-                <User className="h-6 w-6 text-white" />
-              </div>
-              <div className="flex-1">
-                <h3 className="font-semibold">Content Creator</h3>
-                <p className="text-sm text-muted-foreground">Educational Channel</p>
-              </div>
-              <Button variant="outline" size="sm">
-                Subscribe
-              </Button>
-            </div>
 
             {/* Description */}
             <Card>
@@ -303,10 +289,6 @@ export default function VideoDetailPage() {
                   <p className="text-sm font-medium">Upload Date</p>
                   <p className="text-sm text-muted-foreground">{formatDate(video.publishedAt)}</p>
                 </div>
-                <div>
-                  <p className="text-sm font-medium">Category</p>
-                  <Badge variant="secondary">Education</Badge>
-                </div>
               </CardContent>
             </Card>
 
@@ -325,5 +307,5 @@ export default function VideoDetailPage() {
         </div>
       </div>
     </div>
-  )
+  );
 }
