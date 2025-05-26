@@ -1,8 +1,3 @@
-// Mock API functions to simulate the endpoints
-
-import { useHistoryStore } from "./stores/history-store"
-import { useAnalyticsStore } from "./stores/analytics-store"
-
 export interface HistoryItem {
   query: string
   timestamp: string
@@ -19,6 +14,129 @@ export interface HistoryResponse {
 
 export interface AnalyticsResponse {
   analytics: AnalyticsItem[]
+}
+
+export interface SearchResult {
+  videoId: string
+  title: string
+  description: string
+  thumbnailUrl: string
+  publishedAt: string
+}
+
+export interface SearchResponse {
+  results: SearchResult[]
+  totalResults: number
+  nextPageToken?: string
+  prevPageToken?: string
+}
+
+export interface VideoData {
+  videoId: string
+  title: string
+  description: string
+  thumbnailUrl: string
+  publishedAt: string
+  viewCount: number
+  likeCount: number
+  commentCount: number
+}
+
+// Get API base URL from environment
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:3001"
+
+// Generic API request function with error handling
+async function apiRequest<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
+  const url = `${API_BASE_URL}${endpoint}`
+
+  try {
+    const response = await fetch(url, {
+      headers: {
+        "Content-Type": "application/json",
+        ...options.headers,
+      },
+      ...options,
+    })
+
+    if (!response.ok) {
+      throw new Error(`API Error: ${response.status} ${response.statusText}`)
+    }
+
+    return await response.json()
+  } catch (error) {
+    console.error(`API request failed for ${endpoint}:`, error)
+    throw error
+  }
+}
+
+// Search API - GET /search?q={query}&pageToken={token}&maxResults={limit}
+export const searchAPI = async (query: string, pageToken?: string, maxResults = 10): Promise<SearchResponse> => {
+  const params = new URLSearchParams({
+    q: query,
+    maxResults: maxResults.toString(),
+  })
+
+  if (pageToken) {
+    params.append("pageToken", pageToken)
+  }
+
+  return apiRequest<SearchResponse>(`/search?${params.toString()}`)
+}
+
+// Video Details API - GET /video/{videoId}
+export const getVideoAPI = async (videoId: string): Promise<VideoData> => {
+  return apiRequest<VideoData>(`/video/${videoId}`)
+}
+
+// Search History API - GET /history
+export const getHistoryAPI = async (): Promise<HistoryResponse> => {
+  return apiRequest<HistoryResponse>("/history")
+}
+
+// Add to History API - POST /history
+export const addToHistoryAPI = async (query: string, resultsCount: number): Promise<void> => {
+  return apiRequest<void>("/history", {
+    method: "POST",
+    body: JSON.stringify({
+      query: query.trim(),
+      resultsCount,
+      timestamp: new Date().toISOString(),
+    }),
+  })
+}
+
+// Clear History API - DELETE /history
+export const clearHistoryAPI = async (): Promise<void> => {
+  return apiRequest<void>("/history", {
+    method: "DELETE",
+  })
+}
+
+// Analytics API - GET /analytics
+export const getAnalyticsAPI = async (): Promise<AnalyticsResponse> => {
+  return apiRequest<AnalyticsResponse>("/analytics")
+}
+
+// Clear Analytics API - DELETE /analytics
+export const clearAnalyticsAPI = async (): Promise<void> => {
+  return apiRequest<void>("/analytics", {
+    method: "DELETE",
+  })
+}
+
+// Health Check API - GET /health
+export const healthCheckAPI = async (): Promise<{ status: string; timestamp: string }> => {
+  return apiRequest<{ status: string; timestamp: string }>("/health")
+}
+
+// Helper function to add search to history (now uses API)
+export async function addSearchToHistory(query: string, resultsCount: number): Promise<void> {
+  try {
+    await addToHistoryAPI(query, resultsCount)
+  } catch (error) {
+    console.error("Failed to add search to history:", error)
+    // Don't throw error to prevent search functionality from breaking
+  }
 }
 
 // Mock API function for GET /history
@@ -51,63 +169,6 @@ export const mockAnalyticsAPI = async (): Promise<AnalyticsResponse> => {
   }))
 
   return { analytics }
-}
-
-// Helper function to add search to history and analytics
-export function addSearchToHistory(query: string, resultsCount: number) {
-  if (typeof window === "undefined") return
-
-  // Add to localStorage for persistence
-  const historyItem = {
-    id: Date.now().toString(),
-    query: query.trim(),
-    timestamp: Date.now(),
-    resultsCount,
-  }
-
-  // Get existing history
-  const existingHistory = getLocalSearchHistory()
-  const filteredHistory = existingHistory.filter((item) => item.query.toLowerCase() !== query.toLowerCase())
-  const newHistory = [historyItem, ...filteredHistory].slice(0, 50)
-  localStorage.setItem("video_search_history", JSON.stringify(newHistory))
-
-  // Update analytics
-  updateLocalSearchAnalytics(query)
-
-  // Update Zustand stores
-  const historyStore = useHistoryStore.getState()
-  const analyticsStore = useAnalyticsStore.getState()
-
-  historyStore.addHistoryItem({
-    query: query.trim(),
-    timestamp: new Date().toISOString(),
-  })
-
-  // Refresh analytics data
-  analyticsStore.fetchAnalytics()
-}
-
-// Mock API function for search
-export const mockSearchAPI = async (query: string, pageToken?: string, maxResults = 10) => {
-  await new Promise((resolve) => setTimeout(resolve, 800))
-
-  const pageNumber = pageToken ? Number.parseInt(pageToken.replace("PAGE_", "")) : 1
-  const startIndex = (pageNumber - 1) * maxResults
-
-  const mockResults = Array.from({ length: maxResults }, (_, index) => ({
-    videoId: `${startIndex + index + 1}`,
-    title: `${query} - Video ${startIndex + index + 1}: Advanced Tutorial`,
-    description: `This is a comprehensive tutorial about ${query}. Learn everything you need to know with practical examples and real-world applications. Perfect for beginners and advanced users alike.`,
-    thumbnailUrl: `/placeholder.svg?height=180&width=320&text=Video+${startIndex + index + 1}`,
-    publishedAt: new Date(Date.now() - Math.random() * 365 * 24 * 60 * 60 * 1000).toISOString(),
-  }))
-
-  return {
-    results: mockResults,
-    totalResults: 10000000,
-    nextPageToken: pageNumber < 50 ? `PAGE_${pageNumber + 1}` : undefined,
-    prevPageToken: pageNumber > 1 ? `PAGE_${pageNumber - 1}` : undefined,
-  }
 }
 
 // Helper functions to interact with localStorage (keeping existing functionality)

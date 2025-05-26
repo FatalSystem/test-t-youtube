@@ -1,5 +1,6 @@
 import { create } from "zustand"
 import { devtools } from "zustand/middleware"
+import { searchAPI, addSearchToHistory } from "../api"
 
 export interface SearchResult {
   videoId: string
@@ -32,10 +33,8 @@ interface SearchState {
 
   // Actions
   setQuery: (query: string) => void
-  setSearchResults: (response: SearchResponse, resetResults?: boolean) => void
-  appendSearchResults: (response: SearchResponse) => void
-  setLoading: (loading: boolean) => void
-  setLoadingMore: (loading: boolean) => void
+  performSearch: (query: string, resetResults?: boolean) => Promise<void>
+  loadMore: () => Promise<void>
   setError: (error: string | null) => void
   resetSearch: () => void
   clearResults: () => void
@@ -62,54 +61,71 @@ export const useSearchStore = create<SearchState>()(
         set({ query }, false, "setQuery")
       },
 
-      setSearchResults: (response: SearchResponse, resetResults = true) => {
+      performSearch: async (searchQuery: string, resetResults = true) => {
+        const state = get()
+
+        if (!searchQuery.trim()) return
+
         if (resetResults) {
-          set(
-            {
-              allResults: response.results,
-              totalResults: response.totalResults,
-              nextPageToken: response.nextPageToken,
-              hasMore: !!response.nextPageToken,
-              hasSearched: true,
-              error: null,
-            },
-            false,
-            "setSearchResults",
-          )
+          set({ isLoading: true, error: null }, false, "performSearch:start")
         } else {
-          const currentResults = get().allResults
+          set({ isLoadingMore: true, error: null }, false, "performSearch:loadMore")
+        }
+
+        try {
+          const response = await searchAPI(searchQuery, resetResults ? undefined : state.nextPageToken, 10)
+
+          if (resetResults) {
+            set(
+              {
+                query: searchQuery,
+                allResults: response.results,
+                totalResults: response.totalResults,
+                nextPageToken: response.nextPageToken,
+                hasMore: !!response.nextPageToken,
+                hasSearched: true,
+                isLoading: false,
+                error: null,
+              },
+              false,
+              "performSearch:success",
+            )
+
+            // Add to history
+            await addSearchToHistory(searchQuery, response.totalResults)
+          } else {
+            set(
+              {
+                allResults: [...state.allResults, ...response.results],
+                nextPageToken: response.nextPageToken,
+                hasMore: !!response.nextPageToken,
+                isLoadingMore: false,
+                error: null,
+              },
+              false,
+              "performSearch:loadMoreSuccess",
+            )
+          }
+        } catch (error) {
+          const errorMessage = error instanceof Error ? error.message : "Search failed. Please try again."
+
           set(
             {
-              allResults: [...currentResults, ...response.results],
-              nextPageToken: response.nextPageToken,
-              hasMore: !!response.nextPageToken,
-              error: null,
+              isLoading: false,
+              isLoadingMore: false,
+              error: errorMessage,
             },
             false,
-            "appendSearchResults",
+            "performSearch:error",
           )
         }
       },
 
-      appendSearchResults: (response: SearchResponse) => {
-        const currentResults = get().allResults
-        set(
-          {
-            allResults: [...currentResults, ...response.results],
-            nextPageToken: response.nextPageToken,
-            hasMore: !!response.nextPageToken,
-          },
-          false,
-          "appendSearchResults",
-        )
-      },
+      loadMore: async () => {
+        const state = get()
+        if (!state.hasMore || state.isLoadingMore || !state.nextPageToken) return
 
-      setLoading: (loading: boolean) => {
-        set({ isLoading: loading }, false, "setLoading")
-      },
-
-      setLoadingMore: (loading: boolean) => {
-        set({ isLoadingMore: loading }, false, "setLoadingMore")
+        await state.performSearch(state.query, false)
       },
 
       setError: (error: string | null) => {

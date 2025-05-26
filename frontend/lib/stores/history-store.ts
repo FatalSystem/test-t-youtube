@@ -1,13 +1,10 @@
 import { create } from "zustand"
 import { devtools } from "zustand/middleware"
+import { getHistoryAPI, clearHistoryAPI } from "../api"
 
 export interface HistoryItem {
   query: string
   timestamp: string
-}
-
-export interface HistoryResponse {
-  history: HistoryItem[]
 }
 
 interface HistoryState {
@@ -23,41 +20,8 @@ interface HistoryState {
   addHistoryItem: (item: HistoryItem) => void
   setLoading: (loading: boolean) => void
   setError: (error: string | null) => void
-  clearHistory: () => void
   fetchHistory: () => Promise<void>
-}
-
-// Mock API function
-const mockHistoryAPI = async (): Promise<HistoryResponse> => {
-  await new Promise((resolve) => setTimeout(resolve, 500))
-
-  const localHistory = getLocalSearchHistory()
-  const history: HistoryItem[] = localHistory.map((item) => ({
-    query: item.query,
-    timestamp: new Date(item.timestamp).toISOString(),
-  }))
-
-  return { history }
-}
-
-// Helper functions for localStorage
-interface LocalSearchHistoryItem {
-  id: string
-  query: string
-  timestamp: number
-  resultsCount: number
-}
-
-const SEARCH_HISTORY_KEY = "video_search_history"
-
-function getLocalSearchHistory(): LocalSearchHistoryItem[] {
-  if (typeof window === "undefined") return []
-  try {
-    const history = localStorage.getItem(SEARCH_HISTORY_KEY)
-    return history ? JSON.parse(history) : []
-  } catch {
-    return []
-  }
+  clearHistory: () => Promise<void>
 }
 
 export const useHistoryStore = create<HistoryState>()(
@@ -95,18 +59,11 @@ export const useHistoryStore = create<HistoryState>()(
         set({ error }, false, "setError")
       },
 
-      clearHistory: () => {
-        if (typeof window !== "undefined") {
-          localStorage.removeItem(SEARCH_HISTORY_KEY)
-        }
-        set({ history: [] }, false, "clearHistory")
-      },
-
       fetchHistory: async () => {
         set({ isLoading: true, error: null }, false, "fetchHistory:start")
 
         try {
-          const response = await mockHistoryAPI()
+          const response = await getHistoryAPI()
           set(
             {
               history: response.history,
@@ -117,13 +74,41 @@ export const useHistoryStore = create<HistoryState>()(
             "fetchHistory:success",
           )
         } catch (error) {
+          const errorMessage = error instanceof Error ? error.message : "Failed to load search history"
           set(
             {
               isLoading: false,
-              error: "Failed to load search history",
+              error: errorMessage,
             },
             false,
             "fetchHistory:error",
+          )
+        }
+      },
+
+      clearHistory: async () => {
+        set({ isLoading: true, error: null }, false, "clearHistory:start")
+
+        try {
+          await clearHistoryAPI()
+          set(
+            {
+              history: [],
+              isLoading: false,
+              error: null,
+            },
+            false,
+            "clearHistory:success",
+          )
+        } catch (error) {
+          const errorMessage = error instanceof Error ? error.message : "Failed to clear history"
+          set(
+            {
+              isLoading: false,
+              error: errorMessage,
+            },
+            false,
+            "clearHistory:error",
           )
         }
       },

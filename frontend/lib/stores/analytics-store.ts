@@ -1,13 +1,10 @@
 import { create } from "zustand"
 import { devtools } from "zustand/middleware"
+import { getAnalyticsAPI, clearAnalyticsAPI, getHistoryAPI } from "../api"
 
 export interface AnalyticsItem {
   query: string
   count: number
-}
-
-export interface AnalyticsResponse {
-  analytics: AnalyticsItem[]
 }
 
 interface AnalyticsState {
@@ -26,40 +23,8 @@ interface AnalyticsState {
   setUniqueQueries: (unique: number) => void
   setLoading: (loading: boolean) => void
   setError: (error: string | null) => void
-  clearAnalytics: () => void
   fetchAnalytics: () => Promise<void>
-}
-
-// Mock API functions
-const mockAnalyticsAPI = async (): Promise<AnalyticsResponse> => {
-  await new Promise((resolve) => setTimeout(resolve, 600))
-
-  const localAnalytics = getLocalSearchAnalytics()
-  const analytics: AnalyticsItem[] = localAnalytics.map((item) => ({
-    query: item.query,
-    count: item.count,
-  }))
-
-  return { analytics }
-}
-
-// Helper functions for localStorage
-interface LocalSearchAnalytics {
-  query: string
-  count: number
-  lastSearched: number
-}
-
-const SEARCH_ANALYTICS_KEY = "video_search_analytics"
-
-function getLocalSearchAnalytics(): LocalSearchAnalytics[] {
-  if (typeof window === "undefined") return []
-  try {
-    const analytics = localStorage.getItem(SEARCH_ANALYTICS_KEY)
-    return analytics ? JSON.parse(analytics) : []
-  } catch {
-    return []
-  }
+  clearAnalytics: () => Promise<void>
 }
 
 export const useAnalyticsStore = create<AnalyticsState>()(
@@ -103,50 +68,16 @@ export const useAnalyticsStore = create<AnalyticsState>()(
         set({ error }, false, "setError")
       },
 
-      clearAnalytics: () => {
-        if (typeof window !== "undefined") {
-          localStorage.removeItem(SEARCH_ANALYTICS_KEY)
-        }
-        set(
-          {
-            analytics: [],
-            totalSearches: 0,
-            uniqueQueries: 0,
-          },
-          false,
-          "clearAnalytics",
-        )
-      },
-
       fetchAnalytics: async () => {
         set({ isLoading: true, error: null }, false, "fetchAnalytics:start")
 
         try {
-          const [analyticsResponse, historyResponse] = await Promise.all([
-            mockAnalyticsAPI(),
-            // Import and use history API
-            import("./history-store").then((m) => {
-              const mockHistoryAPI = async () => {
-                const localHistory = getLocalSearchHistory()
-                return {
-                  history: localHistory.map((item) => ({
-                    query: item.query,
-                    timestamp: new Date(item.timestamp).toISOString(),
-                  })),
-                }
-              }
-              return mockHistoryAPI()
-            }),
-          ])
-
-          const totalSearchCount = analyticsResponse.analytics.reduce((sum, item) => sum + item.count, 0)
+          const [analyticsResponse, historyResponse] = await Promise.all([getAnalyticsAPI(), getHistoryAPI()])
 
           set(
             {
               analytics: analyticsResponse.analytics,
-              totalSearches: Array.isArray(historyResponse)
-                ? historyResponse.length
-                : historyResponse.history?.length || 0,
+              totalSearches: historyResponse.history.length,
               uniqueQueries: analyticsResponse.analytics.length,
               isLoading: false,
               error: null,
@@ -155,13 +86,43 @@ export const useAnalyticsStore = create<AnalyticsState>()(
             "fetchAnalytics:success",
           )
         } catch (error) {
+          const errorMessage = error instanceof Error ? error.message : "Failed to load analytics data"
           set(
             {
               isLoading: false,
-              error: "Failed to load analytics data",
+              error: errorMessage,
             },
             false,
             "fetchAnalytics:error",
+          )
+        }
+      },
+
+      clearAnalytics: async () => {
+        set({ isLoading: true, error: null }, false, "clearAnalytics:start")
+
+        try {
+          await clearAnalyticsAPI()
+          set(
+            {
+              analytics: [],
+              totalSearches: 0,
+              uniqueQueries: 0,
+              isLoading: false,
+              error: null,
+            },
+            false,
+            "clearAnalytics:success",
+          )
+        } catch (error) {
+          const errorMessage = error instanceof Error ? error.message : "Failed to clear analytics"
+          set(
+            {
+              isLoading: false,
+              error: errorMessage,
+            },
+            false,
+            "clearAnalytics:error",
           )
         }
       },
@@ -171,21 +132,3 @@ export const useAnalyticsStore = create<AnalyticsState>()(
     },
   ),
 )
-
-// Helper function for history (duplicated to avoid circular imports)
-interface LocalSearchHistoryItem {
-  id: string
-  query: string
-  timestamp: number
-  resultsCount: number
-}
-
-function getLocalSearchHistory(): LocalSearchHistoryItem[] {
-  if (typeof window === "undefined") return []
-  try {
-    const history = localStorage.getItem("video_search_history")
-    return history ? JSON.parse(history) : []
-  } catch {
-    return []
-  }
-}

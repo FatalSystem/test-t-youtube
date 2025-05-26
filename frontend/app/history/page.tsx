@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { useHistoryStore } from "@/lib/stores/history-store"
+import { ApiStatus } from "@/components/api-status"
 
 export default function HistoryPage() {
   const router = useRouter()
@@ -46,8 +47,7 @@ export default function HistoryPage() {
   }
 
   const handleClearHistory = async () => {
-    clearHistory()
-    await fetchHistory()
+    await clearHistory()
   }
 
   const groupHistoryByDate = (history: typeof useHistoryStore.getState.history) => {
@@ -85,6 +85,7 @@ export default function HistoryPage() {
     return (
       <div className="min-h-screen bg-background">
         <div className="container mx-auto px-4 py-8">
+          <ApiStatus />
           <div className="animate-pulse space-y-4">
             <div className="h-8 bg-muted rounded w-48"></div>
             <div className="space-y-3">
@@ -102,6 +103,7 @@ export default function HistoryPage() {
     return (
       <div className="min-h-screen bg-background">
         <div className="container mx-auto px-4 py-8">
+          <ApiStatus />
           <div className="text-center py-12">
             <History className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
             <h3 className="text-lg font-semibold mb-2">Error loading history</h3>
@@ -121,6 +123,8 @@ export default function HistoryPage() {
   return (
     <div className="min-h-screen bg-background">
       <div className="container mx-auto px-4 py-8">
+        <ApiStatus />
+
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <div className="flex items-center space-x-3">

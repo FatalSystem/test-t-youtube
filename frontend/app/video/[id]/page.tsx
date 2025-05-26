@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
 import { useVideoStore } from "@/lib/stores/video-store"
+import { ApiStatus } from "@/components/api-status"
 
 // Dynamically import ReactPlayer to avoid SSR issues
 const ReactPlayer = dynamic(() => import("react-player/youtube"), {
@@ -89,6 +90,7 @@ export default function VideoDetailPage() {
     return (
       <div className="min-h-screen bg-background">
         <div className="container mx-auto px-4 py-8">
+          <ApiStatus />
           <div className="animate-pulse">
             <div className="h-8 bg-muted rounded w-32 mb-6"></div>
             <div className="grid lg:grid-cols-3 gap-8">
@@ -114,6 +116,7 @@ export default function VideoDetailPage() {
     return (
       <div className="min-h-screen bg-background">
         <div className="container mx-auto px-4 py-8">
+          <ApiStatus />
           <Button variant="ghost" onClick={() => router.back()} className="mb-6">
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back
@@ -125,7 +128,7 @@ export default function VideoDetailPage() {
             <p className="text-muted-foreground mb-4">
               {error === "Video not found"
                 ? "The video you're looking for doesn't exist or has been removed."
-                : "There was an error loading the video. Please try again."}
+                : error || "There was an error loading the video. Please try again."}
             </p>
             <div className="space-x-2">
               <Button variant="outline" onClick={() => router.back()}>
@@ -142,6 +145,8 @@ export default function VideoDetailPage() {
   return (
     <div className="min-h-screen bg-background">
       <div className="container mx-auto px-4 py-8">
+        <ApiStatus />
+
         {/* Back Button */}
         <Button variant="ghost" onClick={() => router.back()} className="mb-6">
           <ArrowLeft className="h-4 w-4 mr-2" />

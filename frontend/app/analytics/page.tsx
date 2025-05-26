@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
 import { useAnalyticsStore } from "@/lib/stores/analytics-store"
+import { ApiStatus } from "@/components/api-status"
 
 export default function AnalyticsPage() {
   const router = useRouter()
@@ -23,8 +24,7 @@ export default function AnalyticsPage() {
   }
 
   const handleClearAnalytics = async () => {
-    clearAnalytics()
-    await fetchAnalytics()
+    await clearAnalytics()
   }
 
   const getPopularityPercentage = (count: number) => {
@@ -48,6 +48,7 @@ export default function AnalyticsPage() {
     return (
       <div className="min-h-screen bg-background">
         <div className="container mx-auto px-4 py-8">
+          <ApiStatus />
           <div className="animate-pulse space-y-6">
             <div className="h-8 bg-muted rounded w-48"></div>
             <div className="grid md:grid-cols-4 gap-6">
@@ -66,6 +67,7 @@ export default function AnalyticsPage() {
     return (
       <div className="min-h-screen bg-background">
         <div className="container mx-auto px-4 py-8">
+          <ApiStatus />
           <div className="text-center py-12">
             <BarChart3 className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
             <h3 className="text-lg font-semibold mb-2">Error loading analytics</h3>
@@ -85,6 +87,8 @@ export default function AnalyticsPage() {
   return (
     <div className="min-h-screen bg-background">
       <div className="container mx-auto px-4 py-8">
+        <ApiStatus />
+
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <div className="flex items-center space-x-3">

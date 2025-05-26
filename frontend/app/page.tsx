@@ -1,14 +1,14 @@
 "use client"
 
 import type React from "react"
-import { useEffect, useCallback } from "react"
+import { useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { Search, Calendar, Play, Loader2 } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { useSearchStore } from "@/lib/stores/search-store"
-import { mockSearchAPI, addSearchToHistory } from "@/lib/api"
+import { ApiStatus } from "@/components/api-status"
 
 export default function SearchPage() {
   const router = useRouter()
@@ -16,51 +16,16 @@ export default function SearchPage() {
     query,
     allResults,
     totalResults,
-    nextPageToken,
     hasMore,
     hasSearched,
     isLoading,
     isLoadingMore,
     error,
     setQuery,
-    setSearchResults,
-    setLoading,
-    setLoadingMore,
+    performSearch,
+    loadMore,
     setError,
   } = useSearchStore()
-
-  const handleSearch = async (newQuery?: string, resetResults = true) => {
-    const searchQuery = newQuery || query
-    if (!searchQuery.trim()) return
-
-    if (resetResults) {
-      setLoading(true)
-    } else {
-      setLoadingMore(true)
-    }
-
-    try {
-      const response = await mockSearchAPI(searchQuery, resetResults ? undefined : nextPageToken, 10)
-
-      setSearchResults(response, resetResults)
-
-      if (resetResults) {
-        addSearchToHistory(searchQuery, response.totalResults)
-      }
-    } catch (err) {
-      setError("Search failed. Please try again.")
-      console.error("Search failed:", err)
-    } finally {
-      setLoading(false)
-      setLoadingMore(false)
-    }
-  }
-
-  const loadMore = useCallback(() => {
-    if (!isLoadingMore && hasMore && nextPageToken) {
-      handleSearch(query, false)
-    }
-  }, [isLoadingMore, hasMore, nextPageToken, query])
 
   // Infinite scroll implementation
   useEffect(() => {
@@ -82,7 +47,7 @@ export default function SearchPage() {
     const queryParam = urlParams.get("q")
     if (queryParam && queryParam !== query) {
       setQuery(queryParam)
-      handleSearch(queryParam, true)
+      performSearch(queryParam, true)
     }
   }, [])
 
@@ -101,13 +66,20 @@ export default function SearchPage() {
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === "Enter") {
-      handleSearch(query, true)
+      performSearch(query, true)
     }
+  }
+
+  const handleSearch = () => {
+    performSearch(query, true)
   }
 
   return (
     <div className="min-h-screen bg-background">
       <div className="container mx-auto px-4 py-8">
+        {/* API Status */}
+        <ApiStatus />
+
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold mb-6">Video Search</h1>
@@ -124,7 +96,7 @@ export default function SearchPage() {
               className="pl-10 pr-4 py-2 text-base"
             />
             <Button
-              onClick={() => handleSearch(query, true)}
+              onClick={handleSearch}
               disabled={!query.trim() || isLoading}
               className="absolute right-1 top-1/2 transform -translate-y-1/2"
               size="sm"
@@ -150,7 +122,7 @@ export default function SearchPage() {
               size="sm"
               onClick={() => {
                 setError(null)
-                handleSearch(query, true)
+                performSearch(query, true)
               }}
               className="mt-2"
             >
