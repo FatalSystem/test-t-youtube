@@ -80,17 +80,11 @@ export const useSearchStore = create<SearchState>((set, get) => ({
   error: null,
 
   // Actions
-  setQuery: (query: string) => {
-    set({ query });
-  },
+  setQuery: (query: string) => set({ query }),
 
-  performSearch: async (searchQuery: string, resetResults = true) => {
-    const state = get();
-
-    if (!searchQuery.trim()) return;
-
+  performSearch: async (query: string, resetResults = true) => {
     if (resetResults) {
-      set({ isLoading: true, error: null });
+      set({ isLoading: true, error: null, allResults: [], nextPageToken: undefined });
     } else {
       set({ isLoadingMore: true, error: null });
     }
@@ -100,45 +94,38 @@ export const useSearchStore = create<SearchState>((set, get) => ({
         query: SEARCH_QUERY,
         variables: {
           input: {
-            q: searchQuery,
-            pageToken: resetResults ? undefined : state.nextPageToken,
-            maxResults: "10",
+            q: query,
+            pageToken: resetResults ? undefined : get().nextPageToken,
           },
         },
       });
 
-      if (resetResults) {
-        set({
-          query: searchQuery,
-          allResults: data.searchVideos.results,
-          totalResults: data.searchVideos.totalResults,
-          nextPageToken: data.searchVideos.nextPageToken,
-          hasMore: !!data.searchVideos.nextPageToken,
-          hasSearched: true,
-          isLoading: false,
-          error: null,
-        });
+      const results = data.searchVideos.results;
+      const totalResults = data.searchVideos.totalResults;
+      const nextPageToken = data.searchVideos.nextPageToken;
 
-        // Add to history
-        await client.mutate({
-          mutation: ADD_TO_HISTORY_MUTATION,
-          variables: {
-            query: searchQuery,
-            resultsCount: data.searchVideos.totalResults,
-          },
-        });
-      } else {
-        set({
-          allResults: [...state.allResults, ...data.searchVideos.results],
-          nextPageToken: data.searchVideos.nextPageToken,
-          hasMore: !!data.searchVideos.nextPageToken,
-          isLoadingMore: false,
-          error: null,
-        });
-      }
+      set((state) => ({
+        query,
+        allResults: resetResults ? results : [...state.allResults, ...results],
+        totalResults,
+        nextPageToken,
+        hasMore: !!nextPageToken,
+        hasSearched: true,
+        isLoading: false,
+        isLoadingMore: false,
+        error: null,
+      }));
+
+      // Add to history after successful search
+      await client.mutate({
+        mutation: ADD_TO_HISTORY_MUTATION,
+        variables: {
+          query: query.trim(),
+          resultsCount: results.length,
+        },
+      });
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : "Search failed. Please try again.";
-
+      const errorMessage = error instanceof Error ? error.message : "Failed to perform search";
       set({
         isLoading: false,
         isLoadingMore: false,
@@ -148,15 +135,21 @@ export const useSearchStore = create<SearchState>((set, get) => ({
   },
 
   loadMore: async () => {
-    const state = get();
-    if (!state.hasMore || state.isLoadingMore || !state.nextPageToken) return;
+    const { query, nextPageToken, isLoadingMore } = get();
+    if (!nextPageToken || isLoadingMore) return;
 
-    await state.performSearch(state.query, false);
+    try {
+      await get().performSearch(query, false);
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "Failed to load more results";
+      set({
+        isLoadingMore: false,
+        error: errorMessage,
+      });
+    }
   },
 
-  setError: (error: string | null) => {
-    set({ error });
-  },
+  setError: (error: string | null) => set({ error }),
 
   resetSearch: () => {
     set({
@@ -166,8 +159,6 @@ export const useSearchStore = create<SearchState>((set, get) => ({
       nextPageToken: undefined,
       hasMore: false,
       hasSearched: false,
-      isLoading: false,
-      isLoadingMore: false,
       error: null,
     });
   },
@@ -178,7 +169,6 @@ export const useSearchStore = create<SearchState>((set, get) => ({
       totalResults: 0,
       nextPageToken: undefined,
       hasMore: false,
-      hasSearched: false,
     });
   },
 

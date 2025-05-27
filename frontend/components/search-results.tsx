@@ -6,6 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { useSearchStore } from "@/lib/stores/search-store";
 import { formatDate } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useEffect, useRef, useCallback } from "react";
 
 function SearchResultSkeleton() {
   return (
@@ -29,6 +30,24 @@ export function SearchResults() {
   const { query, allResults, totalResults, isLoading, isLoadingMore, hasMore, loadMore, handleVideoClick } =
     useSearchStore();
 
+  // Create a ref for the observer
+  const observer = useRef<IntersectionObserver | null>(null);
+  const lastResultRef = useCallback(
+    (node: HTMLDivElement | null) => {
+      if (isLoadingMore) return;
+      if (observer.current) observer.current.disconnect();
+
+      observer.current = new IntersectionObserver((entries) => {
+        if (entries[0].isIntersecting && hasMore) {
+          loadMore();
+        }
+      });
+
+      if (node) observer.current.observe(node);
+    },
+    [isLoadingMore, hasMore, loadMore]
+  );
+
   if (isLoading) {
     return (
       <div className="space-y-6">
@@ -48,7 +67,7 @@ export function SearchResults() {
   }
 
   return (
-    <div className="space-y-6 mt-8">
+    <div className="space-y-6">
       {query.trim() && (
         <div className="flex items-center justify-between">
           <h2 className="text-xl font-semibold">Search Results for "{query}"</h2>
@@ -63,6 +82,7 @@ export function SearchResults() {
         {allResults.map((item, index) => (
           <Card
             key={`${item.videoId}-${index}`}
+            ref={index === allResults.length - 1 ? lastResultRef : null}
             className="overflow-hidden hover:shadow-lg transition-shadow cursor-pointer"
             onClick={() => handleVideoClick(item.videoId)}
           >
@@ -95,22 +115,6 @@ export function SearchResults() {
             <Loader2 className="h-5 w-5 animate-spin" />
             Loading more videos...
           </div>
-        </div>
-      )}
-
-      {/* Load More Button */}
-      {hasMore && !isLoadingMore && (
-        <div className="flex justify-center py-8">
-          <Button onClick={loadMore} variant="outline" disabled={isLoadingMore}>
-            Load More Videos
-          </Button>
-        </div>
-      )}
-
-      {/* End of Results */}
-      {!hasMore && allResults.length > 0 && (
-        <div className="text-center py-8">
-          <p className="text-muted-foreground">You've reached the end of the search results</p>
         </div>
       )}
 
