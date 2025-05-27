@@ -1,0 +1,14 @@
+{
+  "app/video/[id]/page.tsx -> react-player/youtube": {
+    "id": 4015,
+    "files": [
+      "static/chunks/15.50b49317ff456fcf.js"
+    ]
+  },
+  "node_modules/.pnpm/react-player@2.16.0_react@19.1.0/node_modules/react-player/lib/ReactPlayer.js -> ./Preview": {
+    "id": 1126,
+    "files": [
+      "static/chunks/reactPlayerPreview.1248eb0bb69bf350.js"
+    ]
+  }
+}
