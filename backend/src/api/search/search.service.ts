@@ -31,7 +31,7 @@ export class SearchService {
 
   async getAnalytics() {
     const { analytics } = await this.searchHistoryRepo.getAnalytics();
-    return analytics;
+    return { analytics };
   }
 
   async clearHistory() {

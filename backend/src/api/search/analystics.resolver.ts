@@ -7,7 +7,8 @@ export class AnalyticsResolver {
   constructor(private readonly searchService: SearchService) {}
 
   @Query(() => Analytics)
-  analytics() {
-    return this.searchService.getAnalytics();
+  async analytics() {
+    const result = await this.searchService.getAnalytics();
+    return result;
   }
 }

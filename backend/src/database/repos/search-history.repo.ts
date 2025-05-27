@@ -43,10 +43,11 @@ export class SearchHistoryRepository {
     `);
 
     return {
-      analytics: result.map((item: any) => ({
-        query: item.query,
-        count: parseInt(item.count, 10),
-      })),
+      analytics:
+        result?.map((item: any) => ({
+          query: item.query,
+          count: parseInt(item.count, 10),
+        })) || [],
     };
   }
 
