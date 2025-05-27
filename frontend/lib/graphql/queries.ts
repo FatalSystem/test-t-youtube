@@ -3,10 +3,8 @@ import { gql } from "@apollo/client";
 export const GET_HISTORY_QUERY = gql`
   query GetHistory {
     history {
-      history {
-        query
-        timestamp
-      }
+      query
+      timestamp
     }
   }
 `;

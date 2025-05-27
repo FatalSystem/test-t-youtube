@@ -62,7 +62,7 @@ export const useHistoryStore = create<HistoryState>((set, get) => ({
       });
 
       set({
-        history: data.history.history,
+        history: data.history,
         isLoading: false,
         error: null,
       });
