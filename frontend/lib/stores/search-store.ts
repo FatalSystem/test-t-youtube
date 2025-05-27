@@ -1,5 +1,4 @@
 import { create } from "zustand";
-import { devtools } from "zustand/middleware";
 import { gql, useQuery, useMutation } from "@apollo/client";
 import { client } from "../graphql/client";
 
@@ -20,8 +19,8 @@ export interface SearchResponse {
 
 // GraphQL Queries
 const SEARCH_QUERY = gql`
-  query Search($query: String!, $pageToken: String, $maxResults: Int) {
-    search(query: $query, pageToken: $pageToken, maxResults: $maxResults) {
+  query Search($input: SearchInput!) {
+    searchVideos(input: $input) {
       results {
         videoId
         title
@@ -63,147 +62,127 @@ interface SearchState {
   setError: (error: string | null) => void;
   resetSearch: () => void;
   clearResults: () => void;
+  handleVideoClick: (videoId: string) => void;
 }
 
-export const useSearchStore = create<SearchState>()(
-  devtools(
-    (set, get) => ({
-      // Initial state
+export const useSearchStore = create<SearchState>((set, get) => ({
+  // Initial state
+  query: "",
+  allResults: [],
+  totalResults: 0,
+  nextPageToken: undefined,
+  hasMore: false,
+  hasSearched: false,
+
+  // Loading states
+  isLoading: false,
+  isLoadingMore: false,
+  error: null,
+
+  // Actions
+  setQuery: (query: string) => {
+    set({ query });
+  },
+
+  performSearch: async (searchQuery: string, resetResults = true) => {
+    const state = get();
+
+    if (!searchQuery.trim()) return;
+
+    if (resetResults) {
+      set({ isLoading: true, error: null });
+    } else {
+      set({ isLoadingMore: true, error: null });
+    }
+
+    try {
+      const { data } = await client.query({
+        query: SEARCH_QUERY,
+        variables: {
+          input: {
+            q: searchQuery,
+            pageToken: resetResults ? undefined : state.nextPageToken,
+            maxResults: "10",
+          },
+        },
+      });
+
+      if (resetResults) {
+        set({
+          query: searchQuery,
+          allResults: data.searchVideos.results,
+          totalResults: data.searchVideos.totalResults,
+          nextPageToken: data.searchVideos.nextPageToken,
+          hasMore: !!data.searchVideos.nextPageToken,
+          hasSearched: true,
+          isLoading: false,
+          error: null,
+        });
+
+        // Add to history
+        await client.mutate({
+          mutation: ADD_TO_HISTORY_MUTATION,
+          variables: {
+            query: searchQuery,
+            resultsCount: data.searchVideos.totalResults,
+          },
+        });
+      } else {
+        set({
+          allResults: [...state.allResults, ...data.searchVideos.results],
+          nextPageToken: data.searchVideos.nextPageToken,
+          hasMore: !!data.searchVideos.nextPageToken,
+          isLoadingMore: false,
+          error: null,
+        });
+      }
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "Search failed. Please try again.";
+
+      set({
+        isLoading: false,
+        isLoadingMore: false,
+        error: errorMessage,
+      });
+    }
+  },
+
+  loadMore: async () => {
+    const state = get();
+    if (!state.hasMore || state.isLoadingMore || !state.nextPageToken) return;
+
+    await state.performSearch(state.query, false);
+  },
+
+  setError: (error: string | null) => {
+    set({ error });
+  },
+
+  resetSearch: () => {
+    set({
       query: "",
       allResults: [],
       totalResults: 0,
       nextPageToken: undefined,
       hasMore: false,
       hasSearched: false,
-
-      // Loading states
       isLoading: false,
       isLoadingMore: false,
       error: null,
+    });
+  },
 
-      // Actions
-      setQuery: (query: string) => {
-        set({ query }, false, "setQuery");
-      },
+  clearResults: () => {
+    set({
+      allResults: [],
+      totalResults: 0,
+      nextPageToken: undefined,
+      hasMore: false,
+      hasSearched: false,
+    });
+  },
 
-      performSearch: async (searchQuery: string, resetResults = true) => {
-        const state = get();
-
-        if (!searchQuery.trim()) return;
-
-        if (resetResults) {
-          set({ isLoading: true, error: null }, false, "performSearch:start");
-        } else {
-          set({ isLoadingMore: true, error: null }, false, "performSearch:loadMore");
-        }
-
-        try {
-          const { data } = await client.query({
-            query: SEARCH_QUERY,
-            variables: {
-              query: searchQuery,
-              pageToken: resetResults ? undefined : state.nextPageToken,
-              maxResults: 10,
-            },
-          });
-
-          if (resetResults) {
-            set(
-              {
-                query: searchQuery,
-                allResults: data.search.results,
-                totalResults: data.search.totalResults,
-                nextPageToken: data.search.nextPageToken,
-                hasMore: !!data.search.nextPageToken,
-                hasSearched: true,
-                isLoading: false,
-                error: null,
-              },
-              false,
-              "performSearch:success"
-            );
-
-            // Add to history
-            await client.mutate({
-              mutation: ADD_TO_HISTORY_MUTATION,
-              variables: {
-                query: searchQuery,
-                resultsCount: data.search.totalResults,
-              },
-            });
-          } else {
-            set(
-              {
-                allResults: [...state.allResults, ...data.search.results],
-                nextPageToken: data.search.nextPageToken,
-                hasMore: !!data.search.nextPageToken,
-                isLoadingMore: false,
-                error: null,
-              },
-              false,
-              "performSearch:loadMoreSuccess"
-            );
-          }
-        } catch (error) {
-          const errorMessage = error instanceof Error ? error.message : "Search failed. Please try again.";
-
-          set(
-            {
-              isLoading: false,
-              isLoadingMore: false,
-              error: errorMessage,
-            },
-            false,
-            "performSearch:error"
-          );
-        }
-      },
-
-      loadMore: async () => {
-        const state = get();
-        if (!state.hasMore || state.isLoadingMore || !state.nextPageToken) return;
-
-        await state.performSearch(state.query, false);
-      },
-
-      setError: (error: string | null) => {
-        set({ error }, false, "setError");
-      },
-
-      resetSearch: () => {
-        set(
-          {
-            query: "",
-            allResults: [],
-            totalResults: 0,
-            nextPageToken: undefined,
-            hasMore: false,
-            hasSearched: false,
-            isLoading: false,
-            isLoadingMore: false,
-            error: null,
-          },
-          false,
-          "resetSearch"
-        );
-      },
-
-      clearResults: () => {
-        set(
-          {
-            allResults: [],
-            totalResults: 0,
-            nextPageToken: undefined,
-            hasMore: false,
-            hasSearched: false,
-          },
-          false,
-          "clearResults"
-        );
-      },
-    }),
-    {
-      name: "search-store",
-    }
-  )
-);
+  handleVideoClick: (videoId: string) => {
+    window.open(`https://www.youtube.com/watch?v=${videoId}`, "_blank");
+  },
+}));

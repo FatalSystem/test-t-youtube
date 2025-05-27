@@ -1,120 +1,99 @@
-import { create } from "zustand"
-import { devtools } from "zustand/middleware"
-import { getHistoryAPI, clearHistoryAPI } from "../api"
+import { create } from "zustand";
+import { client } from "../graphql/client";
+import { GET_HISTORY_QUERY, CLEAR_HISTORY_MUTATION } from "../graphql/queries";
 
 export interface HistoryItem {
-  query: string
-  timestamp: string
+  query: string;
+  timestamp: string;
 }
 
 interface HistoryState {
   // Data
-  history: HistoryItem[]
+  history: HistoryItem[];
 
   // Loading states
-  isLoading: boolean
-  error: string | null
+  isLoading: boolean;
+  error: string | null;
 
   // Actions
-  setHistory: (history: HistoryItem[]) => void
-  addHistoryItem: (item: HistoryItem) => void
-  setLoading: (loading: boolean) => void
-  setError: (error: string | null) => void
-  fetchHistory: () => Promise<void>
-  clearHistory: () => Promise<void>
+  setHistory: (history: HistoryItem[]) => void;
+  addHistoryItem: (item: HistoryItem) => void;
+  setLoading: (loading: boolean) => void;
+  setError: (error: string | null) => void;
+  fetchHistory: () => Promise<void>;
+  clearHistory: () => Promise<void>;
 }
 
-export const useHistoryStore = create<HistoryState>()(
-  devtools(
-    (set, get) => ({
-      // Initial state
-      history: [],
+export const useHistoryStore = create<HistoryState>((set, get) => ({
+  // Initial state
+  history: [],
 
-      // Loading states
-      isLoading: false,
-      error: null,
+  // Loading states
+  isLoading: false,
+  error: null,
 
-      // Actions
-      setHistory: (history: HistoryItem[]) => {
-        set({ history, error: null }, false, "setHistory")
-      },
+  // Actions
+  setHistory: (history: HistoryItem[]) => {
+    set({ history, error: null });
+  },
 
-      addHistoryItem: (item: HistoryItem) => {
-        const currentHistory = get().history
-        const filteredHistory = currentHistory.filter((h) => h.query.toLowerCase() !== item.query.toLowerCase())
-        set(
-          {
-            history: [item, ...filteredHistory].slice(0, 50),
-          },
-          false,
-          "addHistoryItem",
-        )
-      },
+  addHistoryItem: (item: HistoryItem) => {
+    const currentHistory = get().history;
+    const filteredHistory = currentHistory.filter((h) => h.query.toLowerCase() !== item.query.toLowerCase());
+    set({
+      history: [item, ...filteredHistory].slice(0, 50),
+    });
+  },
 
-      setLoading: (loading: boolean) => {
-        set({ isLoading: loading }, false, "setLoading")
-      },
+  setLoading: (loading: boolean) => {
+    set({ isLoading: loading });
+  },
 
-      setError: (error: string | null) => {
-        set({ error }, false, "setError")
-      },
+  setError: (error: string | null) => {
+    set({ error });
+  },
 
-      fetchHistory: async () => {
-        set({ isLoading: true, error: null }, false, "fetchHistory:start")
+  fetchHistory: async () => {
+    set({ isLoading: true, error: null });
 
-        try {
-          const response = await getHistoryAPI()
-          set(
-            {
-              history: response.history,
-              isLoading: false,
-              error: null,
-            },
-            false,
-            "fetchHistory:success",
-          )
-        } catch (error) {
-          const errorMessage = error instanceof Error ? error.message : "Failed to load search history"
-          set(
-            {
-              isLoading: false,
-              error: errorMessage,
-            },
-            false,
-            "fetchHistory:error",
-          )
-        }
-      },
+    try {
+      const { data } = await client.query({
+        query: GET_HISTORY_QUERY,
+      });
 
-      clearHistory: async () => {
-        set({ isLoading: true, error: null }, false, "clearHistory:start")
+      set({
+        history: data.history.history,
+        isLoading: false,
+        error: null,
+      });
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "Failed to load search history";
+      set({
+        isLoading: false,
+        error: errorMessage,
+      });
+    }
+  },
 
-        try {
-          await clearHistoryAPI()
-          set(
-            {
-              history: [],
-              isLoading: false,
-              error: null,
-            },
-            false,
-            "clearHistory:success",
-          )
-        } catch (error) {
-          const errorMessage = error instanceof Error ? error.message : "Failed to clear history"
-          set(
-            {
-              isLoading: false,
-              error: errorMessage,
-            },
-            false,
-            "clearHistory:error",
-          )
-        }
-      },
-    }),
-    {
-      name: "history-store",
-    },
-  ),
-)
+  clearHistory: async () => {
+    set({ isLoading: true, error: null });
+
+    try {
+      await client.mutate({
+        mutation: CLEAR_HISTORY_MUTATION,
+      });
+
+      set({
+        history: [],
+        isLoading: false,
+        error: null,
+      });
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "Failed to clear history";
+      set({
+        isLoading: false,
+        error: errorMessage,
+      });
+    }
+  },
+}));

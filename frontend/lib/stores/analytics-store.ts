@@ -1,134 +1,90 @@
-import { create } from "zustand"
-import { devtools } from "zustand/middleware"
-import { getAnalyticsAPI, clearAnalyticsAPI, getHistoryAPI } from "../api"
+import { create } from "zustand";
+import { client } from "../graphql/client";
+import { GET_ANALYTICS_QUERY } from "../graphql/queries";
 
 export interface AnalyticsItem {
-  query: string
-  count: number
+  query: string;
+  count: number;
 }
 
 interface AnalyticsState {
   // Data
-  analytics: AnalyticsItem[]
-  totalSearches: number
-  uniqueQueries: number
+  analytics: AnalyticsItem[];
+  totalSearches: number;
+  uniqueQueries: number;
 
   // Loading states
-  isLoading: boolean
-  error: string | null
+  isLoading: boolean;
+  error: string | null;
 
   // Actions
-  setAnalytics: (analytics: AnalyticsItem[]) => void
-  setTotalSearches: (total: number) => void
-  setUniqueQueries: (unique: number) => void
-  setLoading: (loading: boolean) => void
-  setError: (error: string | null) => void
-  fetchAnalytics: () => Promise<void>
-  clearAnalytics: () => Promise<void>
+  setAnalytics: (analytics: AnalyticsItem[]) => void;
+  setTotalSearches: (total: number) => void;
+  setUniqueQueries: (unique: number) => void;
+  setLoading: (loading: boolean) => void;
+  setError: (error: string | null) => void;
+  fetchAnalytics: () => Promise<void>;
 }
 
-export const useAnalyticsStore = create<AnalyticsState>()(
-  devtools(
-    (set, get) => ({
-      // Initial state
-      analytics: [],
-      totalSearches: 0,
-      uniqueQueries: 0,
+export const useAnalyticsStore = create<AnalyticsState>((set, get) => ({
+  // Initial state
+  analytics: [],
+  totalSearches: 0,
+  uniqueQueries: 0,
 
-      // Loading states
-      isLoading: false,
+  // Loading states
+  isLoading: false,
+  error: null,
+
+  // Actions
+  setAnalytics: (analytics: AnalyticsItem[]) => {
+    set({
+      analytics,
+      uniqueQueries: analytics.length,
       error: null,
+    });
+  },
 
-      // Actions
-      setAnalytics: (analytics: AnalyticsItem[]) => {
-        set(
-          {
-            analytics,
-            uniqueQueries: analytics.length,
-            error: null,
-          },
-          false,
-          "setAnalytics",
-        )
-      },
+  setTotalSearches: (total: number) => {
+    set({ totalSearches: total });
+  },
 
-      setTotalSearches: (total: number) => {
-        set({ totalSearches: total }, false, "setTotalSearches")
-      },
+  setUniqueQueries: (unique: number) => {
+    set({ uniqueQueries: unique });
+  },
 
-      setUniqueQueries: (unique: number) => {
-        set({ uniqueQueries: unique }, false, "setUniqueQueries")
-      },
+  setLoading: (loading: boolean) => {
+    set({ isLoading: loading });
+  },
 
-      setLoading: (loading: boolean) => {
-        set({ isLoading: loading }, false, "setLoading")
-      },
+  setError: (error: string | null) => {
+    set({ error });
+  },
 
-      setError: (error: string | null) => {
-        set({ error }, false, "setError")
-      },
+  fetchAnalytics: async () => {
+    set({ isLoading: true, error: null });
 
-      fetchAnalytics: async () => {
-        set({ isLoading: true, error: null }, false, "fetchAnalytics:start")
+    try {
+      const { data } = await client.query({
+        query: GET_ANALYTICS_QUERY,
+      });
 
-        try {
-          const [analyticsResponse, historyResponse] = await Promise.all([getAnalyticsAPI(), getHistoryAPI()])
+      const analytics = data.analytics;
+      const totalSearches = analytics.reduce((sum: number, item: AnalyticsItem) => sum + item.count, 0);
 
-          set(
-            {
-              analytics: analyticsResponse.analytics,
-              totalSearches: historyResponse.history.length,
-              uniqueQueries: analyticsResponse.analytics.length,
-              isLoading: false,
-              error: null,
-            },
-            false,
-            "fetchAnalytics:success",
-          )
-        } catch (error) {
-          const errorMessage = error instanceof Error ? error.message : "Failed to load analytics data"
-          set(
-            {
-              isLoading: false,
-              error: errorMessage,
-            },
-            false,
-            "fetchAnalytics:error",
-          )
-        }
-      },
-
-      clearAnalytics: async () => {
-        set({ isLoading: true, error: null }, false, "clearAnalytics:start")
-
-        try {
-          await clearAnalyticsAPI()
-          set(
-            {
-              analytics: [],
-              totalSearches: 0,
-              uniqueQueries: 0,
-              isLoading: false,
-              error: null,
-            },
-            false,
-            "clearAnalytics:success",
-          )
-        } catch (error) {
-          const errorMessage = error instanceof Error ? error.message : "Failed to clear analytics"
-          set(
-            {
-              isLoading: false,
-              error: errorMessage,
-            },
-            false,
-            "clearAnalytics:error",
-          )
-        }
-      },
-    }),
-    {
-      name: "analytics-store",
-    },
-  ),
-)
+      set({
+        analytics,
+        totalSearches,
+        uniqueQueries: analytics.length,
+        isLoading: false,
+        error: null,
+      });
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "Failed to load analytics data";
+      set({
+        isLoading: false,
+        error: errorMessage,
+      });
+    }
+  },
+}));
