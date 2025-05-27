@@ -14,8 +14,10 @@ export const GET_HISTORY_QUERY = gql`
 export const GET_ANALYTICS_QUERY = gql`
   query GetAnalytics {
     analytics {
-      query
-      count
+      analytics {
+        query
+        count
+      }
     }
   }
 `;

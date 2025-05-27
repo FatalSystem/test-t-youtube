@@ -69,7 +69,7 @@ export const useAnalyticsStore = create<AnalyticsState>((set, get) => ({
         query: GET_ANALYTICS_QUERY,
       });
 
-      const analytics = data.analytics;
+      const analytics = data.analytics.analytics;
       const totalSearches = analytics.reduce((sum: number, item: AnalyticsItem) => sum + item.count, 0);
 
       set({
