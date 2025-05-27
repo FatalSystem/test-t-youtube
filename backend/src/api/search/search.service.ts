@@ -11,7 +11,6 @@ export class SearchService {
   ) {}
 
   async search(query: SearchInput) {
-    await this.searchHistoryRepo.createSearchHistory(query.q);
     return await this.youtubeService.searchVideos(query);
   }
 
