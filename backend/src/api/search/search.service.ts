@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
-import { SearchQuery } from './types/search.query';
 import { SearchHistoryRepository } from 'src/database/repos/search-history.repo';
 import { YoutubeService } from 'src/youtube/youtube.service';
+import { SearchInput } from './types/inputs/search.input';
 
 @Injectable()
 export class SearchService {
@@ -10,19 +10,17 @@ export class SearchService {
     private readonly youtubeService: YoutubeService,
   ) {}
 
-  async search(query: SearchQuery) {
+  async search(query: SearchInput) {
     await this.searchHistoryRepo.createSearchHistory(query.q);
     return await this.youtubeService.searchVideos(query);
   }
 
   async getSearchHistory() {
     const histories = await this.searchHistoryRepo.getAllSearchHistories();
-    return {
-      history: histories.map((h) => ({
+    return histories.map((h) => ({
         query: h.query,
         timestamp: h.timestamp,
-      })),
-    };
+      }));
   }
 
   async getAnalytics() {
@@ -33,11 +31,9 @@ export class SearchService {
       frequencyMap.set(entry.query, (frequencyMap.get(entry.query) || 0) + 1);
     }
 
-    const analytics = [...frequencyMap.entries()].map(([query, count]) => ({
+    return [...frequencyMap.entries()].map(([query, count]) => ({
       query,
       count,
     }));
-
-    return { analytics };
   }
 }

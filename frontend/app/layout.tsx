@@ -1,28 +1,22 @@
-import type React from "react"
-import type { Metadata } from "next"
-import { Inter } from "next/font/google"
-import "./globals.css"
-import { Navigation } from "@/components/navigation"
+import type React from "react";
+import type { Metadata } from "next";
+import { Inter } from "next/font/google";
+import "./globals.css";
+import { Providers } from "./providers";
 
-const inter = Inter({ subsets: ["latin"] })
+const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Video Search App",
-  description: "Search and discover videos with ease",
-    generator: 'v0.dev'
-}
+  title: "YouTube Search",
+  description: "Search and analyze YouTube videos",
+};
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode
-}) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
       <body className={inter.className}>
-        <Navigation />
-        {children}
+        <Providers>{children}</Providers>
       </body>
     </html>
-  )
+  );
 }
