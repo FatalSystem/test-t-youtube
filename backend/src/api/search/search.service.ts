@@ -11,7 +11,6 @@ export class SearchService {
   ) {}
 
   async search(query: SearchInput) {
-    await this.searchHistoryRepo.createSearchHistory(query.q);
     return await this.youtubeService.searchVideos(query);
   }
 
@@ -31,7 +30,7 @@ export class SearchService {
 
   async getAnalytics() {
     const { analytics } = await this.searchHistoryRepo.getAnalytics();
-    return analytics;
+    return { analytics };
   }
 
   async clearHistory() {

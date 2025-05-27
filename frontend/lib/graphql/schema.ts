@@ -2,7 +2,7 @@ import { gql } from "@apollo/client";
 
 export const typeDefs = gql`
   type Video {
-    videoId: ID!
+    videoId: String!
     title: String!
     description: String!
     thumbnailUrl: String!
@@ -39,7 +39,7 @@ export const typeDefs = gql`
 
   type Query {
     search(query: String!, pageToken: String, maxResults: Int): SearchResult!
-    video(id: ID!): Video!
+    video(id: String!): Video!
     history: SearchHistory!
     analytics: Analytics!
   }

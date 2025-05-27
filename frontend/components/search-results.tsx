@@ -5,24 +5,84 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useSearchStore } from "@/lib/stores/search-store";
 import { formatDate } from "@/lib/utils";
+import { Skeleton } from "@/components/ui/skeleton";
+import { useEffect, useRef, useCallback } from "react";
+
+function SearchResultSkeleton() {
+  return (
+    <Card className="overflow-hidden">
+      <div className="relative">
+        <Skeleton className="w-full h-48" />
+      </div>
+      <CardContent className="p-4">
+        <Skeleton className="h-5 w-3/4 mb-2" />
+        <Skeleton className="h-4 w-full mb-2" />
+        <Skeleton className="h-4 w-1/2 mb-2" />
+        <div className="flex items-center">
+          <Skeleton className="h-3 w-24" />
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
 
 export function SearchResults() {
-  const { query, allResults, totalResults, isLoadingMore, hasMore, loadMore, handleVideoClick } = useSearchStore();
+  const { query, allResults, totalResults, isLoading, isLoadingMore, hasMore, loadMore, handleVideoClick } =
+    useSearchStore();
+
+  // Create a ref for the observer
+  const observer = useRef<IntersectionObserver | null>(null);
+  const lastResultRef = useCallback(
+    (node: HTMLDivElement | null) => {
+      if (isLoadingMore) return;
+      if (observer.current) observer.current.disconnect();
+
+      observer.current = new IntersectionObserver((entries) => {
+        if (entries[0].isIntersecting && hasMore) {
+          loadMore();
+        }
+      });
+
+      if (node) observer.current.observe(node);
+    },
+    [isLoadingMore, hasMore, loadMore]
+  );
+
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <Skeleton className="h-7 w-64" />
+          <Skeleton className="h-5 w-32" />
+        </div>
+
+        {/* Results Grid */}
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+          {Array.from({ length: 6 }).map((_, index) => (
+            <SearchResultSkeleton key={index} />
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h2 className="text-xl font-semibold">Search Results for "{query}"</h2>
-        <p className="text-muted-foreground">
-          {allResults.length} of {totalResults.toLocaleString()} results
-        </p>
-      </div>
+      {query.trim() && (
+        <div className="flex items-center justify-between">
+          <h2 className="text-xl font-semibold">Search Results for "{query}"</h2>
+          <p className="text-muted-foreground">
+            {allResults.length} of {totalResults.toLocaleString()} results
+          </p>
+        </div>
+      )}
 
       {/* Results Grid */}
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         {allResults.map((item, index) => (
           <Card
             key={`${item.videoId}-${index}`}
+            ref={index === allResults.length - 1 ? lastResultRef : null}
             className="overflow-hidden hover:shadow-lg transition-shadow cursor-pointer"
             onClick={() => handleVideoClick(item.videoId)}
           >
@@ -55,22 +115,6 @@ export function SearchResults() {
             <Loader2 className="h-5 w-5 animate-spin" />
             Loading more videos...
           </div>
-        </div>
-      )}
-
-      {/* Load More Button */}
-      {hasMore && !isLoadingMore && (
-        <div className="flex justify-center py-8">
-          <Button onClick={loadMore} variant="outline" disabled={isLoadingMore}>
-            Load More Videos
-          </Button>
-        </div>
-      )}
-
-      {/* End of Results */}
-      {!hasMore && allResults.length > 0 && (
-        <div className="text-center py-8">
-          <p className="text-muted-foreground">You've reached the end of the search results</p>
         </div>
       )}
 
