@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { History, BarChart3, ArrowLeft } from "lucide-react";
+import { History, BarChart3, ArrowLeft, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SearchBar } from "@/components/search-bar";
 import { SearchResults } from "@/components/search-results";
@@ -20,12 +20,20 @@ export default function Home() {
       case "analytics":
         return <AnalyticsDisplay />;
       case "history":
-        return <HistoryDisplay />;
+        return <HistoryDisplay onViewChange={setCurrentView} />;
       default:
         return (
           <>
             <SearchBar />
-            {hasSearched && <SearchResults />}
+            {hasSearched ? (
+              <SearchResults />
+            ) : (
+              <div className="text-center py-12">
+                <Search className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
+                <h3 className="text-lg font-semibold mb-2">Write something to find</h3>
+                <p className="text-muted-foreground">Enter a search term to find videos</p>
+              </div>
+            )}
           </>
         );
     }

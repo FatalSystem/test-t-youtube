@@ -5,18 +5,58 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useSearchStore } from "@/lib/stores/search-store";
 import { formatDate } from "@/lib/utils";
+import { Skeleton } from "@/components/ui/skeleton";
+
+function SearchResultSkeleton() {
+  return (
+    <Card className="overflow-hidden">
+      <div className="relative">
+        <Skeleton className="w-full h-48" />
+      </div>
+      <CardContent className="p-4">
+        <Skeleton className="h-5 w-3/4 mb-2" />
+        <Skeleton className="h-4 w-full mb-2" />
+        <Skeleton className="h-4 w-1/2 mb-2" />
+        <div className="flex items-center">
+          <Skeleton className="h-3 w-24" />
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
 
 export function SearchResults() {
-  const { query, allResults, totalResults, isLoadingMore, hasMore, loadMore, handleVideoClick } = useSearchStore();
+  const { query, allResults, totalResults, isLoading, isLoadingMore, hasMore, loadMore, handleVideoClick } =
+    useSearchStore();
+
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <Skeleton className="h-7 w-64" />
+          <Skeleton className="h-5 w-32" />
+        </div>
+
+        {/* Results Grid */}
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+          {Array.from({ length: 6 }).map((_, index) => (
+            <SearchResultSkeleton key={index} />
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h2 className="text-xl font-semibold">Search Results for "{query}"</h2>
-        <p className="text-muted-foreground">
-          {allResults.length} of {totalResults.toLocaleString()} results
-        </p>
-      </div>
+    <div className="space-y-6 mt-8">
+      {query.trim() && (
+        <div className="flex items-center justify-between">
+          <h2 className="text-xl font-semibold">Search Results for "{query}"</h2>
+          <p className="text-muted-foreground">
+            {allResults.length} of {totalResults.toLocaleString()} results
+          </p>
+        </div>
+      )}
 
       {/* Results Grid */}
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">

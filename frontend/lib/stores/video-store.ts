@@ -1,97 +1,97 @@
-import { create } from "zustand"
-import { devtools } from "zustand/middleware"
-import { getVideoAPI } from "../api"
+import { create } from "zustand";
+import { gql } from "@apollo/client";
+import { client } from "../graphql/client";
 
 export interface VideoData {
-  videoId: string
-  title: string
-  description: string
-  thumbnailUrl: string
-  publishedAt: string
-  viewCount: number
-  likeCount: number
-  commentCount: number
+  videoId: string;
+  title: string;
+  description: string;
+  thumbnailUrl: string;
+  publishedAt: string;
+  viewCount: number;
+  likeCount: number;
+  commentCount: number;
 }
+
+const GET_VIDEO_QUERY = gql`
+  query GetVideo($id: String!) {
+    video(id: $id) {
+      videoId
+      title
+      description
+      thumbnailUrl
+      publishedAt
+      viewCount
+      likeCount
+      commentCount
+    }
+  }
+`;
 
 interface VideoState {
   // Data
-  currentVideo: VideoData | null
+  currentVideo: VideoData | null;
 
   // Loading states
-  isLoading: boolean
-  error: string | null
+  isLoading: boolean;
+  error: string | null;
 
   // Actions
-  setVideo: (video: VideoData) => void
-  setLoading: (loading: boolean) => void
-  setError: (error: string | null) => void
-  clearVideo: () => void
-  fetchVideo: (videoId: string) => Promise<void>
+  setVideo: (video: VideoData) => void;
+  setLoading: (loading: boolean) => void;
+  setError: (error: string | null) => void;
+  clearVideo: () => void;
+  fetchVideo: (videoId: string) => Promise<void>;
 }
 
-export const useVideoStore = create<VideoState>()(
-  devtools(
-    (set, get) => ({
-      // Initial state
+export const useVideoStore = create<VideoState>()((set) => ({
+  // Initial state
+  currentVideo: null,
+
+  // Loading states
+  isLoading: true,
+  error: null,
+
+  // Actions
+  setVideo: (video: VideoData) => {
+    set({ currentVideo: video, error: null });
+  },
+
+  setLoading: (loading: boolean) => {
+    set({ isLoading: loading });
+  },
+
+  setError: (error: string | null) => {
+    set({ error });
+  },
+
+  clearVideo: () => {
+    set({
       currentVideo: null,
-
-      // Loading states
-      isLoading: false,
       error: null,
+    });
+  },
 
-      // Actions
-      setVideo: (video: VideoData) => {
-        set({ currentVideo: video, error: null }, false, "setVideo")
-      },
+  fetchVideo: async (videoId: string) => {
+    set({ isLoading: true, error: null });
 
-      setLoading: (loading: boolean) => {
-        set({ isLoading: loading }, false, "setLoading")
-      },
+    try {
+      const { data } = await client.query({
+        query: GET_VIDEO_QUERY,
+        variables: { id: videoId },
+      });
 
-      setError: (error: string | null) => {
-        set({ error }, false, "setError")
-      },
-
-      clearVideo: () => {
-        set(
-          {
-            currentVideo: null,
-            error: null,
-          },
-          false,
-          "clearVideo",
-        )
-      },
-
-      fetchVideo: async (videoId: string) => {
-        set({ isLoading: true, error: null }, false, "fetchVideo:start")
-
-        try {
-          const video = await getVideoAPI(videoId)
-          set(
-            {
-              currentVideo: video,
-              isLoading: false,
-              error: null,
-            },
-            false,
-            "fetchVideo:success",
-          )
-        } catch (error) {
-          const errorMessage = error instanceof Error ? error.message : "Failed to load video"
-          set(
-            {
-              isLoading: false,
-              error: errorMessage,
-            },
-            false,
-            "fetchVideo:error",
-          )
-        }
-      },
-    }),
-    {
-      name: "video-store",
-    },
-  ),
-)
+      set({
+        currentVideo: data.video,
+        isLoading: false,
+        error: null,
+      });
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "Failed to load video";
+      set({
+        isLoading: false,
+        error: errorMessage,
+      });
+    }
+  },
+}));

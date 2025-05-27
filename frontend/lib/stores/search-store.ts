@@ -36,7 +36,7 @@ const SEARCH_QUERY = gql`
 `;
 
 const ADD_TO_HISTORY_MUTATION = gql`
-  mutation AddToHistory($query: String!, $resultsCount: Int!) {
+  mutation AddToHistory($query: String!, $resultsCount: Float!) {
     addToHistory(query: $query, resultsCount: $resultsCount)
   }
 `;
@@ -183,6 +183,6 @@ export const useSearchStore = create<SearchState>((set, get) => ({
   },
 
   handleVideoClick: (videoId: string) => {
-    window.open(`https://www.youtube.com/watch?v=${videoId}`, "_blank");
+    window.location.href = `/video/${videoId}`;
   },
 }));

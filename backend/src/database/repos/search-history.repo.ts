@@ -1,15 +1,15 @@
-import { EntityRepository } from '@mikro-orm/core';
-import { SearchHistory } from '../entities/search-history.entity';
-import { Injectable } from '@nestjs/common';
-import { EntityManager } from '@mikro-orm/postgresql';
-import { InjectRepository } from '@mikro-orm/nestjs';
+import { EntityRepository } from "@mikro-orm/core";
+import { SearchHistory } from "../entities/search-history.entity";
+import { Injectable } from "@nestjs/common";
+import { EntityManager } from "@mikro-orm/postgresql";
+import { InjectRepository } from "@mikro-orm/nestjs";
 
 @Injectable()
 export class SearchHistoryRepository {
   constructor(
     @InjectRepository(SearchHistory)
     private readonly searchHistoryRepo: EntityRepository<SearchHistory>,
-    private readonly em: EntityManager,
+    private readonly em: EntityManager
   ) {}
   async createSearchHistory(query: string): Promise<SearchHistory> {
     const searchHistory = this.searchHistoryRepo.create({ query });
@@ -25,10 +25,7 @@ export class SearchHistoryRepository {
     return this.searchHistoryRepo.findAll();
   }
 
-  async updateSearchHistory(
-    id: number,
-    query: string,
-  ): Promise<SearchHistory | null> {
+  async updateSearchHistory(id: number, query: string): Promise<SearchHistory | null> {
     const searchHistory = await this.searchHistoryRepo.findOne({ id });
     if (!searchHistory) return null;
     searchHistory.query = query;
@@ -37,19 +34,18 @@ export class SearchHistoryRepository {
   }
 
   async getAnalytics() {
-    const qb = this.em
-      .createQueryBuilder(SearchHistory, 'sh')
-      .select(['sh.query', 'count(*) as count'])
-      .groupBy('sh.query')
-      .orderBy({ count: 'desc' })
-      .limit(10);
-
-    const result = await qb.execute();
+    const result = await this.em.execute(`
+      SELECT query, COUNT(*) as count 
+      FROM search_history 
+      GROUP BY query 
+      ORDER BY count DESC 
+      LIMIT 10
+    `);
 
     return {
       analytics: result.map((item: any) => ({
         query: item.query,
-        count: +item.count,
+        count: parseInt(item.count, 10),
       })),
     };
   }
